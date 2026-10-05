@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.domain.models.graph import GraphPackage
-from app.domain.models.naming import camel, label_of, pascal, plural, slug, tail, words
+from app.domain.models.naming import camel, label_of, pascal, plural, slug, words
 
 TS_SCALAR = {
     "string": "string", "text": "string", "email": "string", "password": "string", "date": "string",

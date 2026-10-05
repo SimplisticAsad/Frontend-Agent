@@ -4,8 +4,8 @@ from __future__ import annotations
 import json
 import re
 
-from app.domain.models.naming import label_of, page_testid, row_testid, slug, tail, workflow_testid, form_testid
-from app.generation.symbols import collection_of, field_label, machine_for_entity, seed_data, state_label
+from app.domain.models.naming import page_testid, row_testid, workflow_testid, form_testid
+from app.generation.symbols import collection_of, field_label, seed_data, state_label
 from app.llm.mock_fixtures.unit_tests import UnitTestFixtures, sample_value, too_short
 from app.llm.mock_fixtures.tsgen import q
 from app.validation.permission_validation import role_permissions
@@ -107,7 +107,6 @@ test('unknown routes show a helpful not-found page', async ({{ page }}) => {{
 
     # ---- login ---------------------------------------------------------------------------
     def _e_login(self, wf: dict) -> str:
-        from app.generation.symbols import collection_of as _c
 
         acs = [a for a in self.g.nodes("acceptance_criteria") if a["workflow"] == wf["id"]]
         screen = self.g.require(wf["screen"])
@@ -288,12 +287,10 @@ test('unknown routes show a helpful not-found page', async ({{ page }}) => {{
         acs = [a for a in self.g.nodes("acceptance_criteria") if a["workflow"] == wf["id"]]
         screen = self.g.require(wf["trigger"]["screen"])
         rows = seed_data(self.g).collections[collection_of(ent)]
-        disp = self.display_field(ent)
         tid = workflow_testid(wf["id"])
         rid = row_testid(ent) + "-" + rows[0]["id"]
         notice = (wf.get("success") or {}).get("notification")
         role_ok = (self.roles_with([wf["permission"]]) or [self.g.roles[0]["key"]])[0]
-        denied = self.roles_without(wf["permission"])
         out = [HEADER, ""]
         for ac in acs:
             role = (ac.get("role") or f"role.{role_ok}").split(".", 1)[1]
@@ -503,7 +500,7 @@ for (const c of CASES) {{
 
     # ---- permissions ----------------------------------------------------------------------
     def _e_permissions(self) -> str:
-        triggers, gated, matrix = [], [], []
+        triggers, gated = [], []
         for w in self.g.workflows:
             if w["kind"] in ("create", "delete") and w.get("permission"):
                 scr = self.g.require(w["trigger"]["screen"])

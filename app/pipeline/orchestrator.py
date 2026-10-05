@@ -5,9 +5,9 @@ import shutil
 from pathlib import Path
 
 from app.artifacts.repository import ArtifactRepository
-from app.config.settings import Limits, Settings
+from app.config.settings import Settings
 from app.domain.models.errors import AgentError, ErrorKind, GraphError, Issue
-from app.domain.models.state import PipelineState, PipelineStatus
+from app.domain.models.state import PipelineState
 from app.execution.browser_runner import BrowserRunner, PlaywrightBrowserRunner
 from app.execution.command_runner import CommandRunner, SubprocessCommandRunner
 from app.generation.file_generator import FileWorkspace
@@ -83,33 +83,7 @@ class FrontendAgent:
         ctx = self.ctx
         try:
             self._prepare_workspace()
-            ctx.status.advance(PipelineState.LOADING_GRAPHS)
-            with ctx.events.stage("load_and_validate_graphs"):
-                self.load_and_validate()
-            ctx.status.advance(PipelineState.GRAPHS_VALIDATED)
-
-            with ctx.events.stage("analysis"):
-                analysis.run(ctx)
-            ctx.status.advance(PipelineState.ANALYZED)
-            with ctx.events.stage("architecture"):
-                architecture.run(ctx)
-            ctx.status.advance(PipelineState.ARCHITECTED)
-            with ctx.events.stage("design_system"):
-                design_system.run(ctx)
-            ctx.status.advance(PipelineState.DESIGN_GENERATED)
-            with ctx.events.stage("planning"):
-                from app.generation.symbols import build_api_bindings
-
-                ctx.bindings = build_api_bindings(ctx.g)
-                page_planning.run(ctx)
-                component_planning.run(ctx)
-                api_integration.run(ctx)
-                state_management.run(ctx)
-            ctx.status.advance(PipelineState.PLANNED)
-            with ctx.events.stage("code_generation") as extra:
-                code_generation.run(ctx)
-                extra["files"] = len(ctx.files)
-            ctx.status.advance(PipelineState.GENERATED)
+            self.plan_and_generate()
             with ctx.events.stage("code_review"):
                 code_review.run(ctx)
 
@@ -133,6 +107,37 @@ class FrontendAgent:
             return final_review.write_report(ctx, "passed")
         except AgentError as e:
             return self._fail(e.kind, str(e), None, e.issues)
+
+    def plan_and_generate(self) -> None:
+        """LOADING_GRAPHS ... GENERATED. Deterministic gates first; nothing is generated from an invalid graph."""
+        ctx = self.ctx
+        ctx.status.advance(PipelineState.LOADING_GRAPHS)
+        with ctx.events.stage("load_and_validate_graphs"):
+            self.load_and_validate()
+        ctx.status.advance(PipelineState.GRAPHS_VALIDATED)
+
+        with ctx.events.stage("analysis"):
+            analysis.run(ctx)
+        ctx.status.advance(PipelineState.ANALYZED)
+        with ctx.events.stage("architecture"):
+            architecture.run(ctx)
+        ctx.status.advance(PipelineState.ARCHITECTED)
+        with ctx.events.stage("design_system"):
+            design_system.run(ctx)
+        ctx.status.advance(PipelineState.DESIGN_GENERATED)
+        with ctx.events.stage("planning"):
+            from app.generation.symbols import build_api_bindings
+
+            ctx.bindings = build_api_bindings(ctx.g)
+            page_planning.run(ctx)
+            component_planning.run(ctx)
+            api_integration.run(ctx)
+            state_management.run(ctx)
+        ctx.status.advance(PipelineState.PLANNED)
+        with ctx.events.stage("code_generation") as extra:
+            code_generation.run(ctx)
+            extra["files"] = len(ctx.files)
+        ctx.status.advance(PipelineState.GENERATED)
 
     def _fail(self, kind: ErrorKind, message: str, outcome=None, issues: list[Issue] | None = None) -> dict:
         ctx = self.ctx

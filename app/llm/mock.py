@@ -3,7 +3,6 @@ pipeline runs without a model.  Optional fault injection lets tests and demos ex
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from app.domain.models.errors import LLMError
 from app.domain.models.graph import GraphPackage
@@ -96,6 +95,8 @@ class MockLLMProvider(LLMProvider):
             else:
                 s = c["screen_spec"]
                 content = fx.unit_test({"screen_ref": s["screen_ref"], "path": path, "page_path": s["page_path"], "page_component": s["page_component"]})
+        elif kind == "integration_test":
+            content = fx.integration({**c["spec"], "path": path})
         elif kind == "e2e":
             content = fx.e2e(c["spec"])
         elif kind == "visual":
@@ -105,7 +106,7 @@ class MockLLMProvider(LLMProvider):
         return {"files": [{"path": path, "purpose": unit["title"], "content": content}]}
 
     def _maybe_fault_component(self, spec: dict, path: str, content: str) -> str:
-        kind, name = spec["kind"], spec["name"]
+        kind = spec["kind"]
         faulty = None
         if "build" in self.faults and kind == "status_badge" and "build" not in self._injected:
             faulty = content + "\nexport const mockFault: number = 'this is not a number';\n"

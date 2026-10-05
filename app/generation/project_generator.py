@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 
 from app.domain.models.graph import GraphPackage
-from app.domain.models.naming import camel, pascal, slug
+from app.domain.models.naming import slug
 from app.domain.specifications.specs import FileRecord, ScreenSpec
 from app.generation.file_generator import FileWorkspace
 from app.generation.symbols import (

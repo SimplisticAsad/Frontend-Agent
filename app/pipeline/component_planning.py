@@ -5,7 +5,7 @@ from app.domain.models.graph import GraphPackage
 from app.domain.models.naming import slug
 from app.domain.specifications.specs import ComponentSpec
 from app.generation.component_contracts import KIND_A11Y, KIND_PRIMITIVES, KIND_STATES, component_props
-from app.generation.symbols import build_api_bindings, component_path
+from app.generation.symbols import component_path
 from app.pipeline.context import RunContext
 
 

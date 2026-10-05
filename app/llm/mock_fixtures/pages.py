@@ -1,7 +1,7 @@
 """Page fixtures (login, dashboard, list, form, details) for the MockLLMProvider."""
 from __future__ import annotations
 
-from app.domain.models.naming import camel, label_of, page_testid, plural, slug, tail, workflow_testid
+from app.domain.models.naming import camel, page_testid, plural, workflow_testid
 from app.generation.symbols import (
     ApiBinding, entity_name, entity_plural, enum_type_name, field_label, list_binding_for_entity, get_binding_for_entity,
     machine_for_entity, workflow_schema_file, workflow_schema_names,
@@ -152,7 +152,6 @@ export function {name}() {{
         decl = "\n".join(f"  const {v} = {b.hook}();" for _, b, v in qs)
         queries = [v for _, _, v in qs]
         pending = " || ".join(f"{v}.isPending" for v in queries)
-        failed = next(v for v in queries)
         err_cond = " || ".join(f"{v}.isError" for v in queries)
         err_src = " ?? ".join(f"{v}.error" for v in queries)
         retry = "; ".join(f"void {v}.refetch()" for v in queries)
@@ -209,7 +208,6 @@ export function {spec['page_component']}() {{
         pre = "  const { can } = usePermissions();\n"
         action_jsx = "undefined"
         empty_action = ""
-        extra_state = ""
         modal = ""
         row_props = ""
         if create_wf:
@@ -409,7 +407,6 @@ export function {spec['page_component']}() {{
         imp.add(self.hooks_file(gb), gb.hook)
         pvar = f"{e}Query"
         decls = [f"  const {{ {param} }} = useParams();", f"  const {pvar} = {gb.hook}({param});"]
-        pre = ""
         sm = machine_for_entity(self.g, ent)
         # related tables (components for other entities)
         sections = []

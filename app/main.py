@@ -59,6 +59,9 @@ def main(argv: list[str] | None = None) -> int:
     except GraphError as e:
         print(json.dumps({"status": "GRAPH_ERROR", "message": str(e), "issues": [i.to_dict() for i in e.issues]}, indent=2), file=sys.stderr)
         return 2
+    except ValueError as e:  # bad CLI input such as an unknown --mock-faults value
+        print(json.dumps({"status": "USAGE_ERROR", "message": str(e)}, indent=2), file=sys.stderr)
+        return 2
     except AgentError as e:
         print(json.dumps({"status": e.kind.value, "message": str(e), "issues": [i.to_dict() for i in e.issues]}, indent=2), file=sys.stderr)
         return 2

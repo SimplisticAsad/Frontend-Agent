@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import json
 
-from app.domain.models.naming import label_of, page_testid, row_testid, workflow_testid
+from app.domain.models.naming import form_testid, page_testid, row_testid, workflow_testid
 from app.generation.symbols import (
-    component_path, entity_name, enum_type_name, field_label, list_binding_for_entity, machine_for_entity, seed_data, state_label, workflow_schema_names,
+    component_path, entity_name, field_label, seed_data, state_label,
 )
 from app.llm.mock_fixtures.pages import PageFixtures
 from app.llm.mock_fixtures.tsgen import q
@@ -126,7 +126,7 @@ class UnitTestFixtures(PageFixtures):
             else:
                 lines.append(f"    await userEvent.type(screen.getByLabelText(/^{lab}/), {q(values[f])});")
         lines.append(f"    await userEvent.click(screen.getByRole('button', {{ name: {q(wf['submit_label'])} }}));")
-        lines.append(f"    await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));")
+        lines.append("    await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));")
         lines.append(f"    expect(onSubmit.mock.calls[0][0]).toMatchObject({json.dumps(values)});")
         lines.append("  });\n")
         lines.append("  it('shows server-side errors without exposing technical detail', () => {")
@@ -226,7 +226,6 @@ class UnitTestFixtures(PageFixtures):
         prop = name and (entity_name(ent)[:1].lower() + entity_name(ent)[1:])
         row = self.seed_rows(ent, 1)[0]
         tid = workflow_testid(wf["id"])
-        states = sm["states"]
         first_to = next(t["to"] for t in sm["transitions"] if t["from"] == row[sm["field"]])
         allowed = [t["to"] for t in sm["transitions"] if t["from"] == row[sm["field"]]]
         lines = [
@@ -372,3 +371,133 @@ class UnitTestFixtures(PageFixtures):
 
         rp = role_permissions(self.g)
         return next((r["key"] for r in self.g.roles if perm not in rp[r["key"]]), None)
+
+
+    # ------------------------------------------------------------------ integration (page + hooks + api client + fetch)
+    def integration(self, spec: dict) -> str:
+        wf = self.g.require(spec["workflow_ref"])
+        screen = self.g.require(wf["screen"])
+        ent = wf["entity"]
+        nav = self.g.require((wf.get("success") or {}).get("navigate") or (wf.get("trigger") or {}).get("screen"))
+        from app.generation.symbols import collection_of, page_component_name, page_path
+
+        page, ppath = page_component_name(screen), page_path(screen)
+        role = (self.roles_with([wf["permission"]]) or [self.g.roles[0]["key"]])[0] if wf.get("permission") else self.g.roles[0]["key"]
+        user = self.user_obj(role)
+        bind = self.binding(wf["api"])
+        seed = seed_data(self.g).collections
+        lists: dict[str, list] = {}
+        for ref in screen["data_sources"]:
+            b = self.binding(ref)
+            if b.operation == "list":
+                lists["/" + b.path.strip("/")] = seed.get(collection_of(b.entity_ref), [])
+        fields = wf["form_fields"]
+        values = {}
+        for f in fields:
+            fd = self.g.entity_field(ent, f)
+            if self.is_required(ent, f):
+                values[f] = seed.get(collection_of(fd["ref"]), [{"id": ""}])[0]["id"] if fd["type"] == "ref" else sample_value(self.g, ent, f)
+        title_field = self.display_field(ent)
+        notice = (wf.get("success") or {}).get("notification")
+        form_id = form_testid(wf["id"])
+        path = "/" + bind.path.strip("/")
+        lines = [
+            "import { screen } from '@testing-library/react';",
+            "import userEvent from '@testing-library/user-event';",
+            "import { Route, Routes } from 'react-router-dom';",
+            "import { afterEach, describe, expect, it, vi } from 'vitest';",
+            f"import {{ {page} }} from '{self._rel(spec['path'], ppath)}';",
+            f"import type {{ AuthUser }} from '{self._rel(spec['path'], 'src/types/api.ts')}';",
+            "import { jsonResponse, renderWithProviders } from '../unit/test-utils';",
+            "",
+            f"const user = {json.dumps(user)} as AuthUser;",
+            f"const lists: Record<string, unknown[]> = {json.dumps(lists)};",
+            "",
+            "interface Call {",
+            "  method: string;",
+            "  path: string;",
+            "  body?: Record<string, unknown>;",
+            "}",
+            "",
+            "function stubApi(post: () => Response) {",
+            "  const calls: Call[] = [];",
+            "  vi.stubGlobal(",
+            "    'fetch',",
+            "    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {",
+            "      const path = new URL(String(input), 'http://localhost').pathname.replace(/^\\/api/, '');",
+            "      const method = init?.method ?? 'GET';",
+            "      calls.push({ method, path, body: init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined });",
+            f"      if (method === {q(bind.method)} && path === {q(path)}) return post();",
+            "      return jsonResponse(lists[path] ?? []);",
+            "    }),",
+            "  );",
+            "  return calls;",
+            "}",
+            "",
+            "async function fillValidForm() {",
+            f"  const form = await screen.findByTestId({q(form_id)});",
+            "  expect(form).toBeInTheDocument();",
+        ]
+        for f in fields:
+            if f not in values:
+                continue
+            lab = field_label(self.g, ent, f)
+            fd = self.g.entity_field(ent, f)
+            if fd["type"] == "ref":
+                lines.append(f"  await userEvent.selectOptions(screen.getByLabelText(/^{lab}/), {q(values[f])});")
+            else:
+                lines.append(f"  await userEvent.type(screen.getByLabelText(/^{lab}/), {q(values[f])});")
+        lines += [
+            "}",
+            "",
+            "function renderFlow() {",
+            "  return renderWithProviders(",
+            "    <Routes>",
+            f"      <Route path={q(screen['route'])} element={{<{page} />}} />",
+            f"      <Route path={q(nav['route'])} element={{<p>navigated to {nav['name']}</p>}} />",
+            "    </Routes>,",
+            f"    {{ route: {q(screen['route'])}, user }},",
+            "  );",
+            "}",
+            "",
+            "afterEach(() => vi.unstubAllGlobals());",
+            "",
+            f"describe({q(wf['id'])}, () => {{",
+            f"  it('validates, calls {bind.method} {bind.path}, notifies and navigates on success', async () => {{",
+            f"    const calls = stubApi(() => jsonResponse({{ id: 'new-1', ...{json.dumps(values)} }}, 201));",
+            "    renderFlow();",
+            "    await fillValidForm();",
+            f"    await userEvent.click(screen.getByRole('button', {{ name: {q(wf['submit_label'])} }}));",
+            f"    expect(await screen.findByText({q('navigated to ' + nav['name'])})).toBeInTheDocument();",
+        ]
+        if notice:
+            lines.append(f"    expect(await screen.findByText({q(notice)})).toBeInTheDocument();")
+        lines += [
+            f"    const sent = calls.find((c) => c.method === {q(bind.method)} && c.path === {q(path)});",
+            "    expect(sent).toBeDefined();",
+            f"    expect(sent?.body).toMatchObject({json.dumps(values)});",
+        ]
+        for sf in bind.session_fields:
+            lines.append(f"    expect(sent?.body?.{sf['name']}).toBe({q(user['id'])});  // injected by the API layer from the session")
+        lines += [
+            "  });",
+            "",
+            "  it('shows server-side validation errors and stays on the form', async () => {",
+            f"    stubApi(() => jsonResponse({{ message: 'Validation failed', errors: {{ {q(title_field)}: 'Already taken' }} }}, 422));",
+            "    renderFlow();",
+            "    await fillValidForm();",
+            f"    await userEvent.click(screen.getByRole('button', {{ name: {q(wf['submit_label'])} }}));",
+            "    expect(await screen.findAllByText('Already taken')).not.toHaveLength(0);",
+            f"    expect(screen.getByTestId({q(form_id)})).toBeInTheDocument();",
+            "  });",
+            "",
+            "  it('does not call the API while the form is invalid', async () => {",
+            "    const calls = stubApi(() => jsonResponse({}, 201));",
+            "    renderFlow();",
+            f"    await screen.findByTestId({q(form_id)});",
+            f"    await userEvent.click(screen.getByRole('button', {{ name: {q(wf['submit_label'])} }}));",
+            f"    expect(calls.filter((c) => c.method === {q(bind.method)})).toHaveLength(0);",
+            "  });",
+            "});",
+        ]
+        return "\n".join(lines) + "\n"

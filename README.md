@@ -1,0 +1,116 @@
+# Frontend Agent
+
+Turns the validated project graphs produced by the Graph-Making Agent into a **working, tested React + TypeScript
+frontend** - and proves it works by building it, driving it in a real browser, taking screenshots at three viewport
+sizes, and correcting what it finds (bounded, guarded, never by rewriting requirements).
+
+```
+projects/task_manager/graphs/  ──►  Frontend Agent  ──►  projects/task_manager/frontend/            (Vite app)
+                                                        projects/task_manager/frontend-artifacts/   (specs, manifests, reports, screenshots)
+                                                        projects/task_manager/logs/agent.jsonl
+```
+
+*Graph Maker: "what should exist?"  Frontend Agent: "how does the frontend implement it?"*
+LLM = reasoning + generation + interpretation. Python = orchestration + validation + execution + safety.
+
+## Quick start
+
+```bash
+pip install -r requirements.txt              # python >= 3.11 ; node >= 20 + npm for the generated app
+
+# no LLM needed: deterministic offline mock provider
+python -m app.main validate --project projects/task_manager
+python -m app.main generate --project projects/task_manager --mock
+python -m app.main test         --project projects/task_manager --mock     # tsc + eslint + build + vitest on the existing output
+python -m app.main browser-test --project projects/task_manager --mock     # Playwright functional + visual
+python -m frontend_agent generate --project projects/task_manager --mock   # same CLI, alternative entry point
+
+# real model (Ollama or any OpenAI-compatible server)
+LLM_PROVIDER=ollama LLM_MODEL=qwen2.5-coder:32b LLM_VISION_MODEL=llama3.2-vision LLM_BASE_URL=http://localhost:11434 \
+  python -m app.main generate --project projects/task_manager
+LLM_PROVIDER=openai LLM_MODEL=... LLM_BASE_URL=https://.../v1 LLM_API_KEY=... python -m app.main generate --project ...
+```
+
+Playwright needs a Chromium it can find (`PLAYWRIGHT_BROWSERS_PATH`, or `PW_CHROMIUM_PATH` for a custom binary).
+Exit codes: `0` success, `1` pipeline finished `failed`, `2` invalid graph / usage error. A full mock run of
+`task_manager` takes ~80 s (install, tsc, eslint, build, 45 unit tests, ~75 browser tests, 28 screenshots).
+
+Useful flags: `--mock-faults build,functional,visual` makes the mock inject a realistic defect so you can watch the
+correction loops work; `--incremental` re-generates only the code-generation units whose context changed; `--skip-install`.
+Limits (all bounded, defaults 3): `MAX_BUILD_CORRECTION_ATTEMPTS`, `MAX_FUNCTIONAL_CORRECTION_ATTEMPTS`,
+`MAX_VISUAL_CORRECTION_ATTEMPTS`, `MAX_LLM_OUTPUT_RETRIES`, `COMMAND_TIMEOUT_S`.
+
+## Pipeline (explicit state machine, `app/pipeline/orchestrator.py`)
+
+```
+CREATED → LOADING_GRAPHS → GRAPHS_VALIDATED → ANALYZED → ARCHITECTED → DESIGN_GENERATED → PLANNED → GENERATED
+        → STATIC_VALIDATION → BUILT → BROWSER_TESTED → VISUALLY_TESTED → FINAL_VALIDATION → COMPLETED
+                     ╲            ╲            ╲
+                      └──── CORRECTING (bounded) ────┘            FAILED reachable from anywhere; state persisted to pipeline_state.json
+```
+
+| stage | who | output |
+|---|---|---|
+| load + validate graphs | Python | `GRAPH_ERROR` / `GRAPH_IMPLEMENTATION_CONFLICT` → **STOP** (no LLM call, no files) |
+| analysis | Python extracts, LLM reviews | `frontend_analysis.json` (routes, screens, workflows, APIs, ... all with graph refs) |
+| architecture | LLM (validated) | `frontend_architecture.json` |
+| design system | LLM (validated incl. WCAG contrast) | `design_system.json` → Tailwind theme + primitives |
+| page / component / API / state planning | LLM (validated against graph) | `screen_specs/*.json`, `component_specs/*.json`, `api_integration.json`, `state_plan.json` |
+| code generation | Python (graph-derived modules) + LLM (feature code, one small unit per call) | `frontend/`, `file_manifest.json`, `test_manifest.json` |
+| code review | LLM (advisory; blocking findings get one guarded fix) | `code_review.json` |
+| static + build | Python runs `tsc`, `eslint`, `vite build`, `vitest` | correction loop (≤3) |
+| browser tests | Playwright against `npm run dev`; mock API derived from `api.json` | functional + axe accessibility; correction loop (≤3) |
+| visual tests | Playwright screenshots (desktop/tablet/mobile) + DOM layout metrics + vision LLM | `screenshots/`, `visual_report.json`; correction loop (≤3) |
+| final validation | Python checklist (21 items), full re-run if late corrections touched code | `frontend_validation_report.json`, `frontend_report.json` |
+
+Every LLM stage has its own prompt in `app/prompts/*.md` (14 files) and receives only the slice of the graph it needs
+(`app/graph/context_builder.py`). Every LLM answer is parsed and **validated by Python** (refs exist, graph-owned fields
+unchanged, props contract kept, paths allowed, ...); invalid answers are fed back and retried a bounded number of times.
+
+### What is generated by Python vs the LLM
+*Python, directly from the graph (no drift possible):* project scaffold, TS types and request types, Zod schemas from `validations.json`,
+API clients from `api.json`, permission table, state-machine table, routes + router, navigation, design-token CSS/Tailwind config,
+the design primitives (Button, Field, Card, Table, Modal, Badge, Alert, Pagination, Tabs, Dropdown, Loading/Empty/Error states),
+auth/notification/error-boundary shell, and the in-browser mock backend for tests.
+*LLM, constrained to listed output paths:* query hooks, feature components, pages, unit tests, Playwright tests, visual-capture spec.
+
+### Guard rails
+* **Requirements cannot be corrected away.** After every correction the structure is re-verified against the graph (form fields, workflow
+  triggers, permission checks, states, routes, transitions, tests). A correction that loses any of them - or that removes test cases/assertions - is
+  reverted and rejected. If the model says the graph is at fault it must answer `graph_conflict`; the run ends with `GRAPH_CONFLICT`.
+* **Only LLM-generated feature files are editable** by corrections; graph-derived contracts are read-only.
+* **File safety:** all writes go through `FileWorkspace` (no `..`, no absolute paths, no hidden/`node_modules`, LLM only under `src/` and `tests/`, whitelisted extensions, size cap).
+* **Command safety:** the only processes ever started are members of the `Cmd` enum (`npm install|run build|typecheck|lint|test|test:e2e|test:visual`); LLM text never reaches a shell, and only whitelisted env vars are forwarded.
+* **Secrets:** read from the environment, never defaulted, redacted from logs and error messages.
+* **No unbounded loops:** `correction_loop` is the only retry construct; each bucket has a limit; a correction that changes nothing ends the loop.
+
+## Error classification
+`GRAPH_ERROR, GRAPH_IMPLEMENTATION_CONFLICT, GRAPH_CONFLICT, TYPE_ERROR, LINT_ERROR, BUILD_ERROR, RUNTIME_ERROR, NETWORK_ERROR, API_CONTRACT_ERROR,
+FUNCTIONAL_TEST_ERROR, VISUAL_ERROR, ACCESSIBILITY_ERROR` (+ `LLM_ERROR`, `SAFETY_ERROR`). Browser tests tag failures
+(`RUNTIME_ERROR`: uncaught page error; `API_CONTRACT_ERROR`: call to an endpoint missing from `api.json`; `[a11y]` tests via axe) so the right correction prompt gets the right evidence.
+
+## Tests of the agent itself
+```bash
+pytest                    # 138 tests, ~10 s, no network/LLM/npm: unit + integration + golden (scripted npm/Playwright runners)
+pytest -m e2e             # real toolchain: npm install, tsc, eslint, vite, vitest, Playwright/Chromium, incl. fault-injection self-correction (~10 min)
+```
+Covers graph loading/validation (all negative cases → `GRAPH_ERROR`), context building, routes, API mapping, component planning, manifests and
+traceability (`ProjectListPage.tsx → screen.project.list, workflow.project.create, api.project.list, entity.project`), permission and workflow
+mapping, correction loops (fail→fail→pass = 2 attempts; always failing = `FAILED` after 3), requirement guard, error classification, build/browser
+runners, Playwright report and visual-issue parsing, retry limits, providers (HTTP mocked), safety, redaction, state machine, CLI, incremental regeneration,
+and a golden structural test of the whole task_manager output (`tests/golden`).
+
+## Layout
+```
+app/  main.py  config/  domain/{models,specifications}/  graph/{loader,context_builder}  validation/  pipeline/ (one module per stage + orchestrator, correction, loop)
+      llm/{base,ollama,openai_compatible,mock,factory}  generation/{project_generator,symbols,catalog,templates/frontend/...}  execution/{command_runner,browser_runner}
+      artifacts/repository  prompts/*.md  observability.py
+tests/{unit,integration,golden,e2e,fixtures}   projects/task_manager/graphs   docs/graph_contract.md
+```
+
+## Honest limitations
+* The graph schema (`docs/graph_contract.md`) is defined by this repo; point the loader at a different Graph-Making Agent output by adapting `graph/loader.py` / `validation/graph_validation.py`. Unsupported screen/component/workflow kinds are rejected as `GRAPH_ERROR` rather than guessed.
+* The offline mock reproduces what a good model should write; it is a harness, not evidence about any real model. The Ollama/OpenAI providers are tested against mocked HTTP only - quality with a live model depends on the model, and the validators/correction loops exist to contain that variance.
+* `MockLLMProvider` has no vision; in mock mode visual QA relies on the deterministic DOM layout metrics (overflow, overlap, clipping, dialog bounds, blank areas, touch targets). With a vision model the screenshots are analysed in addition.
+* There is no real backend: browser tests run against an in-browser mock API generated from `api.json` (`tests/e2e/support`). The generated app proxies `/api` to `VITE_BACKEND_URL` (default `http://localhost:8000`) for real use.
+* Full regeneration is the default; `--incremental` skips unchanged code-generation units (context hash) but still runs every gate.

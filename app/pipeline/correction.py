@@ -12,7 +12,6 @@ import re
 from dataclasses import dataclass, field
 
 from app.domain.models.errors import ErrorKind, Issue
-from app.domain.models.naming import slug
 from app.pipeline.context import RunContext
 from app.pipeline.failures import Failure
 from app.validation.frontend_validation import check_generated_source, verify_structure

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import shutil
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 from app.domain.models.errors import ErrorKind, LLMError

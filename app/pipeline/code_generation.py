@@ -16,7 +16,7 @@ from app.domain.models.naming import slug, tail
 from app.domain.specifications.specs import FileRecord, TestRecord
 from app.generation.catalog import build_catalog
 from app.generation.project_generator import ProjectGenerator
-from app.generation.symbols import build_api_bindings, seed_data
+from app.generation.symbols import seed_data
 from app.pipeline.context import RunContext
 from app.validation.frontend_validation import check_generated_source
 
@@ -35,6 +35,13 @@ class Unit:
     test: TestRecord | None = None
 
 
+def closure_refs(ctx: RunContext, seeds: list[str]) -> list[str]:
+    """Seeds plus everything they transitively depend on in the graph (roles are noise for traceability)."""
+    clos = ctx.contexts.closure([s for s in seeds if s])
+    refs = [n["id"] for nodes in clos.values() for n in nodes if not n["id"].startswith("role.")]
+    return list(dict.fromkeys([s for s in seeds if s] + refs))
+
+
 def plan_units(ctx: RunContext) -> list[Unit]:
     g = ctx.g
     units: list[Unit] = []
@@ -47,11 +54,11 @@ def plan_units(ctx: RunContext) -> list[Unit]:
                           [b.id for b in bs] + [b.entity_ref for b in bs if b.entity_ref], {"resource": res}))
     # 2. components: shared first, simple before composite
     for c in sorted(ctx.component_specs, key=lambda c: (c.scope != "shared", COMPONENT_ORDER.get(c.kind, 9), c.name)):
-        refs = [c.component_ref, *c.entity_refs, *c.workflow_refs, *c.api_refs] if c.component_ref else []
+        refs = closure_refs(ctx, [c.component_ref]) if c.component_ref else []
         units.append(Unit(f"component:{c.component_ref}", "component", f"Component {c.name}", [c.path], refs, {"component_ref": c.component_ref}))
     # 3. pages
     for s in ctx.screen_specs:
-        refs = [s.screen_ref, *s.actions, *s.data_sources, *s.entity_refs, *s.permissions, *s.components]
+        refs = closure_refs(ctx, [s.screen_ref, *s.actions, *s.data_sources, *s.permissions, *s.components])
         units.append(Unit(f"page:{s.screen_ref}", "page", f"Page {s.page_component}", [s.page_path], refs, {"screen_ref": s.screen_ref}))
     # 4. unit tests
     for c in ctx.component_specs:
@@ -64,6 +71,12 @@ def plan_units(ctx: RunContext) -> list[Unit]:
             path = f"tests/unit/{s.page_component}.test.tsx"
             rec = TestRecord(id=f"test.unit.{slug(s.page_component)}", type="unit", path=path, source_refs=[s.screen_ref, *s.data_sources, *s.actions], description=f"{s.page_component} loading/empty/error/success states")
             units.append(Unit(f"unit_test:{s.screen_ref}", "unit_test", f"Unit test for {s.page_component}", [path], rec.source_refs, {"screen_ref": s.screen_ref}, rec))
+    # 4b. integration tests: page + hooks + API client + fetch, one per create workflow
+    for w in g.workflows:
+        if w["kind"] == "create":
+            path = f"tests/integration/{slug(w['id'])}.test.tsx"
+            rec = TestRecord(id=f"test.integration.{slug(w['id'])}", type="integration", path=path, source_refs=[w["id"], w["api"], w["entity"], w["screen"]], description=f"{w['name']} through the real page, hooks and API client")
+            units.append(Unit(f"integration:{w['id']}", "integration_test", f"Integration test for {w['id']}", [path], rec.source_refs, {"workflow_ref": w["id"]}, rec))
     # 5. e2e
     ac = g.nodes("acceptance_criteria")
     nav_refs = [s.screen_ref for s in ctx.screen_specs]
@@ -116,7 +129,7 @@ def unit_context(ctx: RunContext, u: Unit) -> dict:
         base["unit"] = {"id": u.id, "type": u.type, "title": u.title, "allowed_output_paths": u.expected_paths}
         if u.type == "unit_test":
             base["source_under_test"] = {"path": spec.page_path, "content": ctx.workspace.read(spec.page_path)}
-    else:  # e2e / visual
+    else:  # integration / e2e / visual
         base.update(cb.for_refs(u.source_refs))
         base["screens"] = [s.model_dump() for s in ctx.screen_specs]
         seed = seed_data(g)

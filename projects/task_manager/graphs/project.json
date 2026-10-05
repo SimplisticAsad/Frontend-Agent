@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "graph": "project",
+  "nodes": [
+    {
+      "id": "project.task_manager",
+      "name": "Task Manager",
+      "description": "Managers organise work into projects and tasks; employees track and update the tasks assigned to them.",
+      "version": "1.0.0"
+    }
+  ]
+}

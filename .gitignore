@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+dist/
+test-results/
+playwright-report/
+.env
+# generated output
+projects/*/frontend/
+projects/*/frontend-artifacts/
+projects/*/logs/

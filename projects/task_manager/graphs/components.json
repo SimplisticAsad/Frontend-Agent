@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "graph": "components",
+  "nodes": [
+    {
+      "id": "component.page_header",
+      "name": "PageHeader",
+      "kind": "page_header",
+      "shared": true
+    },
+    {
+      "id": "component.login.form",
+      "name": "LoginForm",
+      "kind": "form",
+      "feature": "auth",
+      "entity": "entity.credentials",
+      "workflow": "workflow.auth.login"
+    },
+    {
+      "id": "component.dashboard.stats",
+      "name": "DashboardStats",
+      "kind": "stats",
+      "feature": "dashboard",
+      "entities": [
+        "entity.project",
+        "entity.task"
+      ]
+    },
+    {
+      "id": "component.project.table",
+      "name": "ProjectTable",
+      "kind": "table",
+      "feature": "projects",
+      "entity": "entity.project",
+      "link_to": "screen.project.details",
+      "row_actions": [
+        "workflow.project.delete"
+      ]
+    },
+    {
+      "id": "component.project.form",
+      "name": "ProjectForm",
+      "kind": "form",
+      "feature": "projects",
+      "entity": "entity.project",
+      "workflow": "workflow.project.create"
+    },
+    {
+      "id": "component.task.table",
+      "name": "TaskTable",
+      "kind": "table",
+      "feature": "tasks",
+      "entity": "entity.task",
+      "link_to": "screen.task.details"
+    },
+    {
+      "id": "component.task.form",
+      "name": "TaskForm",
+      "kind": "form",
+      "feature": "tasks",
+      "entity": "entity.task",
+      "workflow": "workflow.task.create"
+    },
+    {
+      "id": "component.task.status_badge",
+      "name": "TaskStatusBadge",
+      "kind": "status_badge",
+      "feature": "tasks",
+      "entity": "entity.task",
+      "state_machine": "sm.task.status"
+    },
+    {
+      "id": "component.task.status_control",
+      "name": "TaskStatusControl",
+      "kind": "status_control",
+      "feature": "tasks",
+      "entity": "entity.task",
+      "workflow": "workflow.task.update_status",
+      "state_machine": "sm.task.status"
+    }
+  ]
+}

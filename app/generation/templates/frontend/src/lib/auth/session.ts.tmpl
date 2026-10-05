@@ -1,0 +1,30 @@
+import type { Session } from '../../types/api';
+
+const STORAGE_KEY = '__SESSION_KEY__';
+
+export function getSession(): Session | null {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Session) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setSession(session: Session): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  } catch {
+    /* storage unavailable: session lives in memory only */
+  }
+}
+
+export function clearSession(): void {
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export const SESSION_STORAGE_KEY = STORAGE_KEY;

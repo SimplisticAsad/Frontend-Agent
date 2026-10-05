@@ -1,0 +1,179 @@
+{
+  "schema_version": "1.0",
+  "graph": "acceptance_criteria",
+  "nodes": [
+    {
+      "id": "ac.auth.login",
+      "title": "User signs in with valid credentials",
+      "workflow": "workflow.auth.login",
+      "role": "role.manager",
+      "type": "workflow_success",
+      "scenario": {
+        "given": [
+          "the user is on the sign in page"
+        ],
+        "when": [
+          "the user enters valid credentials",
+          "the user submits the form"
+        ],
+        "then": [
+          "the dashboard is shown"
+        ]
+      },
+      "expect": {
+        "navigate": "screen.dashboard"
+      }
+    },
+    {
+      "id": "ac.project.create",
+      "title": "Manager creates a project",
+      "workflow": "workflow.project.create",
+      "role": "role.manager",
+      "type": "workflow_success",
+      "scenario": {
+        "given": [
+          "the manager is authenticated"
+        ],
+        "when": [
+          "the manager opens the project page",
+          "clicks create project",
+          "enters valid project information",
+          "submits the form"
+        ],
+        "then": [
+          "the project is created",
+          "the project appears in the project list"
+        ]
+      },
+      "expect": {
+        "navigate": "screen.project.list",
+        "visible_field": "name"
+      }
+    },
+    {
+      "id": "ac.project.create.validation",
+      "title": "Project creation rejects an invalid name",
+      "workflow": "workflow.project.create",
+      "role": "role.manager",
+      "type": "validation_failure",
+      "scenario": {
+        "given": [
+          "the manager is authenticated"
+        ],
+        "when": [
+          "the manager submits the create project form with a too short name"
+        ],
+        "then": [
+          "a validation message is shown",
+          "no project is created"
+        ]
+      },
+      "field": "name"
+    },
+    {
+      "id": "ac.project.create.denied",
+      "title": "Employee cannot start project creation",
+      "workflow": "workflow.project.create",
+      "role": "role.employee",
+      "type": "workflow_denied",
+      "scenario": {
+        "given": [
+          "an employee is authenticated"
+        ],
+        "when": [
+          "the employee opens the project page"
+        ],
+        "then": [
+          "no create project action is available"
+        ]
+      }
+    },
+    {
+      "id": "ac.project.delete",
+      "title": "Manager deletes a project",
+      "workflow": "workflow.project.delete",
+      "role": "role.manager",
+      "type": "workflow_success",
+      "scenario": {
+        "given": [
+          "the manager is authenticated",
+          "a project exists"
+        ],
+        "when": [
+          "the manager deletes the project and confirms"
+        ],
+        "then": [
+          "the project is removed from the list"
+        ]
+      },
+      "expect": {
+        "removed": true
+      }
+    },
+    {
+      "id": "ac.task.create",
+      "title": "Manager creates a task",
+      "workflow": "workflow.task.create",
+      "role": "role.manager",
+      "type": "workflow_success",
+      "scenario": {
+        "given": [
+          "the manager is authenticated"
+        ],
+        "when": [
+          "the manager opens the task page",
+          "clicks create task",
+          "enters valid task information",
+          "submits the form"
+        ],
+        "then": [
+          "the task appears in the task list"
+        ]
+      },
+      "expect": {
+        "navigate": "screen.task.list",
+        "visible_field": "title"
+      }
+    },
+    {
+      "id": "ac.task.update_status",
+      "title": "Assignee advances a task",
+      "workflow": "workflow.task.update_status",
+      "role": "role.employee",
+      "type": "transition_allowed",
+      "scenario": {
+        "given": [
+          "an employee is assigned a TODO task"
+        ],
+        "when": [
+          "the employee moves the task to IN_PROGRESS"
+        ],
+        "then": [
+          "the task shows IN_PROGRESS"
+        ]
+      },
+      "transition": {
+        "from": "TODO",
+        "to": "IN_PROGRESS"
+      }
+    },
+    {
+      "id": "ac.task.update_status.not_assigned",
+      "title": "Employee cannot update a task assigned to someone else",
+      "workflow": "workflow.task.update_status",
+      "role": "role.employee",
+      "type": "transition_denied",
+      "scenario": {
+        "given": [
+          "an employee views a task assigned to someone else"
+        ],
+        "when": [
+          "the employee opens the task"
+        ],
+        "then": [
+          "no status change is available"
+        ]
+      }
+    }
+  ]
+}

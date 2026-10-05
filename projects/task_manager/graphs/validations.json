@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0",
+  "graph": "validations",
+  "nodes": [
+    {
+      "id": "validation.project.name",
+      "entity": "entity.project",
+      "field": "name",
+      "rules": {
+        "required": true,
+        "min_length": 3,
+        "max_length": 80
+      },
+      "message": null
+    },
+    {
+      "id": "validation.project.description",
+      "entity": "entity.project",
+      "field": "description",
+      "rules": {
+        "max_length": 500
+      },
+      "message": null
+    },
+    {
+      "id": "validation.task.title",
+      "entity": "entity.task",
+      "field": "title",
+      "rules": {
+        "required": true,
+        "min_length": 3,
+        "max_length": 120
+      },
+      "message": null
+    },
+    {
+      "id": "validation.task.description",
+      "entity": "entity.task",
+      "field": "description",
+      "rules": {
+        "max_length": 2000
+      },
+      "message": null
+    },
+    {
+      "id": "validation.task.project",
+      "entity": "entity.task",
+      "field": "project_id",
+      "rules": {
+        "required": true
+      },
+      "message": "Select a project"
+    },
+    {
+      "id": "validation.credentials.email",
+      "entity": "entity.credentials",
+      "field": "email",
+      "rules": {
+        "required": true,
+        "format": "email"
+      },
+      "message": null
+    },
+    {
+      "id": "validation.credentials.password",
+      "entity": "entity.credentials",
+      "field": "password",
+      "rules": {
+        "required": true,
+        "min_length": 8
+      },
+      "message": null
+    }
+  ]
+}

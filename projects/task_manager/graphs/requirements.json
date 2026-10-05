@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "graph": "requirements",
+  "nodes": [
+    {
+      "id": "req.auth.login",
+      "text": "Users sign in with email and password.",
+      "capabilities": [
+        "capability.auth.login"
+      ]
+    },
+    {
+      "id": "req.project.manage",
+      "text": "Managers can create and delete projects; every user can view them.",
+      "capabilities": [
+        "capability.project.view",
+        "capability.project.create",
+        "capability.project.delete"
+      ]
+    },
+    {
+      "id": "req.task.manage",
+      "text": "Managers create tasks; employees update the status of tasks assigned to them following the task state machine.",
+      "capabilities": [
+        "capability.task.create",
+        "capability.task.update_status"
+      ]
+    }
+  ]
+}

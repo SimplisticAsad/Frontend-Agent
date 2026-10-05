@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "graph": "questions",
+  "nodes": [
+    {
+      "id": "question.task.comments",
+      "text": "Should tasks support comments?",
+      "status": "deferred",
+      "blocking": false
+    },
+    {
+      "id": "question.project.archive",
+      "text": "Is archiving projects required?",
+      "status": "resolved",
+      "answer": "No, only deletion.",
+      "blocking": false
+    }
+  ]
+}

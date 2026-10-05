@@ -1,0 +1,13 @@
+[project]
+name = "frontend-agent"
+version = "0.1.0"
+description = "Frontend Agent: turns validated project graphs into a tested React/TypeScript application"
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2.5", "httpx>=0.27"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "e2e: runs npm install / build / Playwright against a generated app (slow, needs network + Chromium)",
+]
+addopts = "-m 'not e2e'"

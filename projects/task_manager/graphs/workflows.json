@@ -1,0 +1,104 @@
+{
+  "schema_version": "1.0",
+  "graph": "workflows",
+  "nodes": [
+    {
+      "id": "workflow.auth.login",
+      "name": "Sign in",
+      "kind": "login",
+      "entity": "entity.credentials",
+      "api": "api.auth.login",
+      "screen": "screen.login",
+      "form_fields": [
+        "email",
+        "password"
+      ],
+      "submit_label": "Sign in",
+      "success": {
+        "navigate": "screen.dashboard"
+      },
+      "permission": null
+    },
+    {
+      "id": "workflow.project.create",
+      "name": "Create project",
+      "kind": "create",
+      "entity": "entity.project",
+      "api": "api.project.create",
+      "permission": "permission.project.create",
+      "trigger": {
+        "screen": "screen.project.list",
+        "label": "Create project"
+      },
+      "screen": "screen.project.create",
+      "form_fields": [
+        "name",
+        "description"
+      ],
+      "submit_label": "Create project",
+      "success": {
+        "navigate": "screen.project.list",
+        "notification": "Project created"
+      }
+    },
+    {
+      "id": "workflow.project.delete",
+      "name": "Delete project",
+      "kind": "delete",
+      "entity": "entity.project",
+      "api": "api.project.delete",
+      "permission": "permission.project.delete",
+      "trigger": {
+        "screen": "screen.project.list",
+        "label": "Delete",
+        "per_row": true
+      },
+      "confirm": true,
+      "success": {
+        "notification": "Project deleted"
+      }
+    },
+    {
+      "id": "workflow.task.create",
+      "name": "Create task",
+      "kind": "create",
+      "entity": "entity.task",
+      "api": "api.task.create",
+      "permission": "permission.task.create",
+      "trigger": {
+        "screen": "screen.task.list",
+        "label": "Create task"
+      },
+      "screen": "screen.task.create",
+      "form_fields": [
+        "title",
+        "description",
+        "project_id",
+        "assignee_id",
+        "due_date"
+      ],
+      "submit_label": "Create task",
+      "success": {
+        "navigate": "screen.task.list",
+        "notification": "Task created"
+      }
+    },
+    {
+      "id": "workflow.task.update_status",
+      "name": "Update task status",
+      "kind": "transition",
+      "entity": "entity.task",
+      "api": "api.task.update_status",
+      "permission": "permission.task.update_status",
+      "state_machine": "sm.task.status",
+      "field": "status",
+      "trigger": {
+        "screen": "screen.task.details",
+        "label": "Change status"
+      },
+      "success": {
+        "notification": "Task status updated"
+      }
+    }
+  ]
+}

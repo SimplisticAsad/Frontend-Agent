@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "graph": "assumptions",
+  "nodes": [
+    {
+      "id": "assumption.auth.token",
+      "text": "The backend issues a bearer token on login; the frontend keeps it in browser storage and sends it on every request."
+    },
+    {
+      "id": "assumption.pagination",
+      "text": "List endpoints return full arrays; the UI paginates client-side."
+    }
+  ]
+}

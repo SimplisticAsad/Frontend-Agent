@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "graph": "actors",
+  "nodes": [
+    {
+      "id": "actor.person",
+      "name": "Person",
+      "description": "A human user of the web application."
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0",
+  "graph": "capabilities",
+  "nodes": [
+    {
+      "id": "capability.auth.login",
+      "name": "Sign in",
+      "roles": [
+        "role.manager",
+        "role.employee"
+      ],
+      "workflow": "workflow.auth.login"
+    },
+    {
+      "id": "capability.project.view",
+      "name": "View projects",
+      "roles": [
+        "role.manager",
+        "role.employee"
+      ]
+    },
+    {
+      "id": "capability.project.create",
+      "name": "Create projects",
+      "roles": [
+        "role.manager"
+      ],
+      "workflow": "workflow.project.create"
+    },
+    {
+      "id": "capability.project.delete",
+      "name": "Delete projects",
+      "roles": [
+        "role.manager"
+      ],
+      "workflow": "workflow.project.delete"
+    },
+    {
+      "id": "capability.task.create",
+      "name": "Create tasks",
+      "roles": [
+        "role.manager"
+      ],
+      "workflow": "workflow.task.create"
+    },
+    {
+      "id": "capability.task.update_status",
+      "name": "Update task status",
+      "roles": [
+        "role.manager",
+        "role.employee"
+      ],
+      "workflow": "workflow.task.update_status"
+    }
+  ]
+}

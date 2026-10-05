@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "graph": "dependencies",
+  "nodes": [
+    {
+      "id": "dep.screen.task.list.uses.project",
+      "from": "screen.task.list",
+      "to": "api.project.list",
+      "kind": "uses"
+    },
+    {
+      "id": "dep.workflow.task.create.needs.users",
+      "from": "workflow.task.create",
+      "to": "api.user.list",
+      "kind": "uses"
+    }
+  ]
+}

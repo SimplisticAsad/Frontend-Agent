@@ -1,0 +1,191 @@
+{
+  "schema_version": "1.0",
+  "graph": "screens",
+  "nodes": [
+    {
+      "id": "screen.login",
+      "name": "Sign in",
+      "route": "/login",
+      "layout": "public",
+      "kind": "login",
+      "feature": "auth",
+      "components": [
+        "component.login.form"
+      ],
+      "data_sources": [],
+      "actions": [
+        "workflow.auth.login"
+      ],
+      "permissions": [],
+      "nav": false
+    },
+    {
+      "id": "screen.dashboard",
+      "name": "Dashboard",
+      "route": "/dashboard",
+      "layout": "authenticated",
+      "kind": "dashboard",
+      "feature": "dashboard",
+      "components": [
+        "component.page_header",
+        "component.dashboard.stats"
+      ],
+      "data_sources": [
+        "api.project.list",
+        "api.task.list"
+      ],
+      "actions": [],
+      "permissions": [
+        "permission.dashboard.view"
+      ],
+      "nav": true,
+      "nav_order": 1
+    },
+    {
+      "id": "screen.project.list",
+      "name": "Projects",
+      "route": "/projects",
+      "layout": "authenticated",
+      "kind": "list",
+      "entity": "entity.project",
+      "feature": "projects",
+      "components": [
+        "component.page_header",
+        "component.project.table"
+      ],
+      "data_sources": [
+        "api.project.list"
+      ],
+      "actions": [
+        "workflow.project.create",
+        "workflow.project.delete"
+      ],
+      "permissions": [
+        "permission.project.view"
+      ],
+      "nav": true,
+      "nav_order": 2
+    },
+    {
+      "id": "screen.project.create",
+      "name": "New project",
+      "route": "/projects/new",
+      "layout": "authenticated",
+      "kind": "form",
+      "entity": "entity.project",
+      "feature": "projects",
+      "components": [
+        "component.page_header",
+        "component.project.form"
+      ],
+      "data_sources": [],
+      "actions": [
+        "workflow.project.create"
+      ],
+      "permissions": [
+        "permission.project.create"
+      ],
+      "nav": false
+    },
+    {
+      "id": "screen.project.details",
+      "name": "Project details",
+      "route": "/projects/:id",
+      "layout": "authenticated",
+      "kind": "details",
+      "entity": "entity.project",
+      "feature": "projects",
+      "components": [
+        "component.page_header",
+        "component.task.table"
+      ],
+      "data_sources": [
+        "api.project.get",
+        "api.task.list",
+        "api.project.list",
+        "api.user.list"
+      ],
+      "actions": [],
+      "permissions": [
+        "permission.project.view"
+      ],
+      "nav": false
+    },
+    {
+      "id": "screen.task.list",
+      "name": "Tasks",
+      "route": "/tasks",
+      "layout": "authenticated",
+      "kind": "list",
+      "entity": "entity.task",
+      "feature": "tasks",
+      "components": [
+        "component.page_header",
+        "component.task.table"
+      ],
+      "data_sources": [
+        "api.task.list",
+        "api.project.list",
+        "api.user.list"
+      ],
+      "actions": [
+        "workflow.task.create"
+      ],
+      "permissions": [
+        "permission.task.view"
+      ],
+      "nav": true,
+      "nav_order": 3
+    },
+    {
+      "id": "screen.task.create",
+      "name": "New task",
+      "route": "/tasks/new",
+      "layout": "authenticated",
+      "kind": "form",
+      "entity": "entity.task",
+      "feature": "tasks",
+      "components": [
+        "component.page_header",
+        "component.task.form"
+      ],
+      "data_sources": [
+        "api.project.list",
+        "api.user.list"
+      ],
+      "actions": [
+        "workflow.task.create"
+      ],
+      "permissions": [
+        "permission.task.create"
+      ],
+      "nav": false
+    },
+    {
+      "id": "screen.task.details",
+      "name": "Task details",
+      "route": "/tasks/:id",
+      "layout": "authenticated",
+      "kind": "details",
+      "entity": "entity.task",
+      "feature": "tasks",
+      "components": [
+        "component.page_header",
+        "component.task.status_badge",
+        "component.task.status_control"
+      ],
+      "data_sources": [
+        "api.task.get",
+        "api.project.list",
+        "api.user.list"
+      ],
+      "actions": [
+        "workflow.task.update_status"
+      ],
+      "permissions": [
+        "permission.task.view"
+      ],
+      "nav": false
+    }
+  ]
+}

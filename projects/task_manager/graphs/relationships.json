@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "graph": "relationships",
+  "nodes": [
+    {
+      "id": "rel.project.has_tasks",
+      "from": "entity.project",
+      "to": "entity.task",
+      "kind": "one_to_many"
+    },
+    {
+      "id": "rel.task.assigned_to",
+      "from": "entity.task",
+      "to": "entity.user",
+      "kind": "many_to_one"
+    },
+    {
+      "id": "rel.project.owned_by",
+      "from": "entity.project",
+      "to": "entity.user",
+      "kind": "many_to_one"
+    }
+  ]
+}
